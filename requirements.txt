@@ -18,7 +18,6 @@ sumy
 nltk
 spacy
 pytextrank
-sqlite3
 datetime
 bcrypt
 schedule
