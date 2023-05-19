@@ -14,3 +14,13 @@ urllib3==1.26.14
 yarg==0.1.9
 gunicorn
 flask
+sumy
+nltk
+spacy
+pytextrank
+sqlite3
+datetime
+bcrypt
+schedule
+threading
+
