@@ -16,3 +16,4 @@ yarg==0.1.9
 gunicorn
 sumy
 spacy
+pytextrank
