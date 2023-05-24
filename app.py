@@ -16,7 +16,7 @@ from datetime import date
 import bcrypt
 import schedule
 import threading
-from datetime import datetime
+from datetime import datetime,timedelta
 import pytz
 
 
@@ -1047,8 +1047,13 @@ def getAlarms(user_id):
 
 @app.route("/check-alarms/<int:user_id>",methods = ["GET"])
 def checkAlarms(user_id):
-    tz = pytz.timezone('Europe/Istanbul')  # Türkiye saati için Istanbul zaman dilimini kullanın
-    now = datetime.now(tz).strftime("%Y-%m-%d %H:%M")
+    now = datetime.now()
+
+    # Saati 3 saat ileri almak için timedelta kullanma
+    now = now + timedelta(hours=3)
+    now = now.strftime("%Y-%m-%d %H:%M")
+    print(now)
+
     user_alarm_dates = cursor.execute(f"select date from Alarms where user_id = '{user_id}'").fetchall()
 
     for item_date in user_alarm_dates:
