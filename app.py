@@ -924,9 +924,40 @@ def BugunkuHaberlerAlg(newstype,attr):
         a = cursor.execute(
             f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'teknoloji' and date like '{today}%' order by date desc  ")
         return a.fetchall()
-@app.route("/habergirisi")
-def habergetir():
-    haberGirişi()
+@app.route("/habergirisi/sozcu")
+def sozcuHaberGetir():
+    sozcuSonDakika()
+    sozcuDunya()
+    sozcuTekno()
+    sozcuEkonomi()
+    return "tüm haberler kaydedildi."
+@app.route("/habergirisi/karar")
+def sozcuHaberGetir():
+    kararSonDakika()
+    kararDunya()
+    kararHayat()
+    kararEkonomi()
+    return "tüm haberler kaydedildi."
+@app.route("/habergirisi/gg")
+def sozcuHaberGetir():
+    ggSonDakika()
+    ggDunya()
+    ggHayat()
+    ggEkonomi()
+    return "tüm haberler kaydedildi."
+@app.route("/habergirisi/trt")
+def sozcuHaberGetir():
+    trtSonDakika()
+    trtDunya()
+    trtTeknoloji()
+    trtEkonomi()
+    return "tüm haberler kaydedildi."
+@app.route("/habergirisi/son-dakika")
+def sozcuHaberGetir():
+    sonDakika()
+    sonSpor()
+    sonEkonomi()
+    sonMagazin()
     return "tüm haberler kaydedildi."
 
 @app.route("/<string:newstype>/<int:sayi>/<string:attr>",methods = ["GET"])
@@ -1060,29 +1091,6 @@ def kullanıcı(data):
 
 
 
-
-
-def haberGirişi():
-    sozcuSonDakika()
-    sozcuDunya()
-    sozcuTekno()
-    sozcuEkonomi()
-    ggHayat()
-    ggDunya()
-    ggEkonomi()
-    ggSonDakika()
-    kararSonDakika()
-    kararEkonomi()
-    kararHayat()
-    kararDunya()
-    trtDunya()
-    trtEkonomi()
-    trtTeknoloji()
-    trtSonDakika()
-    sonDakika()
-    sonSpor()
-    sonMagazin()
-    sonEkonomi()
 
 
 if __name__ == "__main__":
