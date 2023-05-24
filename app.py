@@ -228,7 +228,10 @@ def sozcuSonDakika():
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
         datetime = datetime.text
-        datetime = date_converter(datetime, "sözcü")
+        try:
+            datetime = date_converter(datetime, "sözcü")
+        except:
+            break
 
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
@@ -255,7 +258,10 @@ def sozcuEkonomi():
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
         datetime = datetime.text
-        datetime = date_converter(datetime, "sözcü")
+        try:
+            datetime = date_converter(datetime, "sözcü")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "ekonomi")
@@ -281,7 +287,10 @@ def sozcuDunya():
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
         datetime = datetime.text
-        datetime = date_converter(datetime, "sözcü")
+        try:
+            datetime = date_converter(datetime, "sözcü")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "dünya")
@@ -307,7 +316,10 @@ def sozcuTekno():
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
         datetime = datetime.text
-        datetime = date_converter(datetime, "sözcü")
+        try:
+            datetime = date_converter(datetime, "sözcü")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "teknoloji")
@@ -344,7 +356,10 @@ def kararSonDakika():
 
         contenttext = makale_cek(link)
 
-        datetime = date_converter(datetime, "karar")
+        try:
+            datetime = date_converter(datetime, "karar")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "karar", link, "son dakika")
@@ -379,7 +394,10 @@ def kararDunya():
 
         contenttext = makale_cek(link)
 
-        datetime = date_converter(datetime, "karar")
+        try:
+            datetime = date_converter(datetime, "karar")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "karar", link, "dünya")
@@ -414,7 +432,10 @@ def kararEkonomi():
 
         contenttext = makale_cek(link)
 
-        datetime = date_converter(datetime, "karar")
+        try:
+            datetime = date_converter(datetime, "karar")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "karar", link, "ekonomi")
@@ -449,7 +470,10 @@ def kararHayat():
 
         contenttext = makale_cek(link)
 
-        datetime = date_converter(datetime, "karar")
+        try:
+            datetime = date_converter(datetime, "karar")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "karar", link, "hayat")
@@ -480,7 +504,10 @@ def trtSonDakika():
         contenttext = str(makale_cek(link))
         contenttext = " ".join(contenttext.split())
 
-        datetime = date_converter(datetime, "trt")
+        try:
+            datetime = date_converter(datetime, "trt")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "trt", link, "son dakika")
@@ -508,7 +535,10 @@ def trtDunya():
 
         contenttext = makale_cek(link)
         contenttext = " ".join(contenttext.split())
-        datetime = date_converter(datetime, "trt")
+        try:
+            datetime = date_converter(datetime, "trt")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "trt", link, "dünya")
@@ -536,7 +566,10 @@ def trtEkonomi():
 
         contenttext = makale_cek(link)
         contenttext = " ".join(contenttext.split())
-        datetime = date_converter(datetime, "trt")
+        try:
+            datetime = date_converter(datetime, "trt")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "trt", link, "ekonomi")
@@ -564,7 +597,10 @@ def trtTeknoloji():
 
         contenttext = makale_cek(link)
         contenttext = " ".join(contenttext.split())
-        datetime = date_converter(datetime, "trt")
+        try:
+            datetime = date_converter(datetime, "trt")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "trt", link, "teknoloji")
@@ -594,7 +630,10 @@ def sonDakika():
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
         contenttext = makale_cek(link)
 
-        datetime = date_converter(datetime, "son dakika")
+        try:
+            datetime = date_converter(datetime, "son dakika")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "son dakika")
@@ -621,7 +660,10 @@ def sonEkonomi():
         except:
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "son dakika")
+        try:
+            datetime = date_converter(datetime, "son dakika")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "ekonomi")
@@ -675,7 +717,10 @@ def sonSpor():
         except:
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "son dakika")
+        try:
+            datetime = date_converter(datetime, "son dakika")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "spor")
@@ -703,7 +748,10 @@ def ggSonDakika():
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
 
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "gerçek gündem")
+        try:
+            datetime = date_converter(datetime, "gerçek gündem")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "son dakika")
@@ -729,7 +777,10 @@ def ggDunya():
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
 
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "gerçek gündem")
+        try:
+            datetime = date_converter(datetime, "gerçek gündem")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "dünya")
@@ -755,7 +806,10 @@ def ggEkonomi():
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
 
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "gerçek gündem")
+        try:
+            datetime = date_converter(datetime, "gerçek gündem")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "ekonomi")
@@ -781,7 +835,10 @@ def ggHayat():
             image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
 
         contenttext = makale_cek(link)
-        datetime = date_converter(datetime, "gerçek gündem")
+        try:
+            datetime = date_converter(datetime, "gerçek gündem")
+        except:
+            break
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
             saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "hayat")
