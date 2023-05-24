@@ -932,28 +932,28 @@ def sozcuHaberGetir():
     sozcuEkonomi()
     return "tüm haberler kaydedildi."
 @app.route("/habergirisi/karar")
-def sozcuHaberGetir():
+def kararHaberGetir():
     kararSonDakika()
     kararDunya()
     kararHayat()
     kararEkonomi()
     return "tüm haberler kaydedildi."
 @app.route("/habergirisi/gg")
-def sozcuHaberGetir():
+def ggHaberGetir():
     ggSonDakika()
     ggDunya()
     ggHayat()
     ggEkonomi()
     return "tüm haberler kaydedildi."
 @app.route("/habergirisi/trt")
-def sozcuHaberGetir():
+def trtHaberGetir():
     trtSonDakika()
     trtDunya()
     trtTeknoloji()
     trtEkonomi()
     return "tüm haberler kaydedildi."
 @app.route("/habergirisi/son-dakika")
-def sozcuHaberGetir():
+def sonHaberGetir():
     sonDakika()
     sonSpor()
     sonEkonomi()
