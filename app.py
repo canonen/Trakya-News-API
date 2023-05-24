@@ -16,6 +16,8 @@ from datetime import date
 import bcrypt
 import schedule
 import threading
+from datetime import datetime
+import pytz
 
 
 con = sqlite3.connect("TrakyaNewsDB.db",check_same_thread=False)
@@ -46,18 +48,6 @@ month_dict = {
     "Aralık": "12"
 }
 
-def sozcu_tarih(tarih):
-    b = tarih.split(" ")
-    b[3] = month_dict[b[3]]
-    c = b[2] + " " + b[3] + " " + b[4] + " " + b[1] + " " + b[0]
-    return c
-
-class Haber():
-    def __init__(self,baslik,resim,metin,tarih):
-        self.baslik = baslik
-        self.resim = resim
-        self.metin = metin
-        self.tarih = tarih
 
 #Algorithms
 def luhn(metin, cumle_sayisi=3):
@@ -154,6 +144,44 @@ def textrank(text):
             result += str(sent)
     return result
 
+
+def saveToDatabase(title, image, text, date, site_name, url_link, type):
+    cursor.execute(f"insert into News(title,image,text,date,site_name,url_link,type) values(?,?,?,?,?,?,?)",
+                   (title, image, text, date, site_name, url_link, type))
+    con.commit()
+    id = cursor.execute(f"select news_id from News where url_link = '{url_link}'").fetchone()
+    cursor.execute(
+        f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",
+        (id[0], luhn(text), lex_rank(text), lsa_summary(text), textrank(text),
+         giso(text), ortayol(text), all_in_one(text)))
+    con.commit()
+
+
+
+
+def date_converter(tarih, site):
+    if site == "sözcü":
+        tarih = str(tarih).replace("-", "").split(" ")
+        temp_date = tarih[4] + "-" + month_dict[tarih[3]] + "-" + tarih[2] + " " + tarih[0]
+        return temp_date
+    if site == "karar":
+        tarih = str(tarih).replace("/", " ").split(" ")
+        temp_date = tarih[2] + "-" + tarih[1] + "-" + tarih[0] + " " + tarih[3]
+        return temp_date
+    if site == "trt":
+        tarih = str(tarih).replace(", ", "").replace(".", " ").split(" ")
+        temp_date = tarih[2] + "-" + tarih[1] + "-" + tarih[0] + " " + tarih[3]
+        return temp_date
+    if site == "son dakika":
+        tarih = str(tarih).replace(".", " ").split(" ")
+        temp_date = tarih[2] + "-" + tarih[1] + "-" + tarih[0] + " " + tarih[3]
+        return temp_date
+    if site == "gerçek gündem":
+        tarih = str(tarih).split(" ")
+        temp_date = tarih[2] + "-" + month_dict[tarih[1]] + "-" + tarih[0] + " " + tarih[3]
+        return temp_date
+
+
 def makale_cek(url):
     url1 = requests.get(url)
     soup = BeautifulSoup(url1.content, "lxml")
@@ -179,39 +207,38 @@ def makale_cek(url):
         if a == "":
             for j in soup.select("p"):
                 a = a + j.getText()
-                return a
+            return a
 
-def scrapingSonDakika():
+
+# sozcu
+def sozcuSonDakika():
     r = requests.get("https://www.sozcu.com.tr/son-dakika/")
-    soup = BeautifulSoup(r.content,"lxml")
-    news = soup.find_all("div",attrs={"class":"timeline-card"})
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "timeline-card"})
 
     for new in news:
         link = new.a.get("href")
         head = new.find("img", attrs={"loading": "lazy"})
         image = head.get("src").replace("?w=220&h=165&mode=crop", "?w=800&h=300&mode=crop")
-        contentText = makale_cek(link)
+        contenttext = makale_cek(link)
         imgtitle = new.find("img", attrs={"loading": "lazy"})
         title = imgtitle.get("alt")
 
         req = requests.get(link)
-        soup2 = BeautifulSoup(req.content,"lxml")
+        soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
-        dateformat = datetime.text
-
+        datetime = datetime.text
+        datetime = date_converter(datetime, "sözcü")
 
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
-            cursor.execute("insert into News (title,image,text,date,site_name,url_link,type) values (?,?,?,?,?,?,?) ",(title,image,contentText,sozcu_tarih(datetime.text),"sozcu",link,"sondakika"))
-            con.commit()
-            id = cursor.execute(f"select news_id from News where url_link = '{link}'").fetchone()
-            cursor.execute(f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",(id[0],luhn(contentText),lex_rank(contentText),lsa_summary(contentText),textrank(contentText),giso(contentText),ortayol(contentText),all_in_one(contentText)))
-            con.commit()
+            saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "son dakika")
+
         else:
             break
 
 
-def scrapingEkonomi():
+def sozcuEkonomi():
     r = requests.get("https://www.sozcu.com.tr/kategori/ekonomi/")
     soup = BeautifulSoup(r.content, "lxml")
     news = soup.find_all("div", attrs={"class": "news-item"})
@@ -221,59 +248,23 @@ def scrapingEkonomi():
         head = new.find("img", attrs={"loading": "lazy"})
         image = head.get("src").replace("?w=220&h=165&mode=crop", "?w=800&h=300&mode=crop").replace(
             "?w=243&h=136&mode=crop", "?w=800&h=300&mode=crop")
-        contentText = makale_cek(link)
+        contenttext = makale_cek(link)
         imgtitle = new.find("img", attrs={"loading": "lazy"})
         title = imgtitle.get("alt")
         req = requests.get(link)
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
+        datetime = datetime.text
+        datetime = date_converter(datetime, "sözcü")
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
-            cursor.execute("insert into News (title,image,text,date,site_name,url_link,type) values (?,?,?,?,?,?,?) ",
-                           (title, image, contentText, sozcu_tarih(datetime.text), "sozcu", link, "ekonomi"))
-            con.commit()
-            id = cursor.execute(f"select news_id from News where url_link = '{link}'").fetchone()
-            cursor.execute(
-                f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",
-                (id[0], luhn(contentText), lex_rank(contentText), lsa_summary(contentText), textrank(contentText),
-                 giso(contentText), ortayol(contentText), all_in_one(contentText)))
-            con.commit()
+            saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "ekonomi")
+
         else:
             break
 
-def scrapingSpor():
-    r = requests.get("https://www.sozcu.com.tr/kategori/spor")
-    soup = BeautifulSoup(r.content, "lxml")
-    news = soup.find_all("div", attrs={"class": "news-item"})
 
-    for new in news:
-        link = new.a.get("href")
-        head = new.find("img", attrs={"loading": "lazy"})
-        image = head.get("src").replace("?w=220&h=165&mode=crop", "?w=800&h=300&mode=crop").replace(
-            "?w=243&h=136&mode=crop", "?w=800&h=300&mode=crop")
-        contentText = makale_cek(link)
-        if contentText == "Güncel HaberlerDöviz K":
-            contentText = "Site kaynaklı içerik hatası..."
-        imgtitle = new.find("img", attrs={"loading": "lazy"})
-        title = imgtitle.get("alt")
-        req = requests.get(link)
-        soup2 = BeautifulSoup(req.content, "lxml")
-        datetime = soup2.find("time")
-        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
-        if len(link_list.fetchall()) == 0:
-            cursor.execute("insert into News (title,image,text,date,site_name,url_link,type) values (?,?,?,?,?,?,?) ",
-                           (title, image, contentText, sozcu_tarih(datetime.text), "sozcu", link, "spor"))
-            con.commit()
-            id = cursor.execute(f"select news_id from News where url_link = '{link}'").fetchone()
-            cursor.execute(
-                f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",
-                (id[0], luhn(contentText), lex_rank(contentText), lsa_summary(contentText), textrank(contentText),
-                 giso(contentText), ortayol(contentText), all_in_one(contentText)))
-            con.commit()
-        else:
-            break
-
-def scrapingDunya():
+def sozcuDunya():
     r = requests.get("https://www.sozcu.com.tr/kategori/dunya/")
     soup = BeautifulSoup(r.content, "lxml")
     news = soup.find_all("div", attrs={"class": "news-item"})
@@ -283,28 +274,24 @@ def scrapingDunya():
         head = new.find("img", attrs={"loading": "lazy"})
         image = head.get("src").replace("?w=220&h=165&mode=crop", "?w=800&h=300&mode=crop").replace(
             "?w=243&h=136&mode=crop", "?w=800&h=300&mode=crop")
-        contentText = makale_cek(link)
+        contenttext = makale_cek(link)
         imgtitle = new.find("img", attrs={"loading": "lazy"})
         title = imgtitle.get("alt")
         req = requests.get(link)
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
+        datetime = datetime.text
+        datetime = date_converter(datetime, "sözcü")
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
-            cursor.execute("insert into News (title,image,text,date,site_name,url_link,type) values (?,?,?,?,?,?,?) ",
-                           (title, image, contentText, sozcu_tarih(datetime.text), "sozcu", link, "dunya"))
-            con.commit()
-            id = cursor.execute(f"select news_id from News where url_link = '{link}'").fetchone()
-            cursor.execute(
-                f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",
-                (id[0], luhn(contentText), lex_rank(contentText), lsa_summary(contentText), textrank(contentText),
-                 giso(contentText), ortayol(contentText), all_in_one(contentText)))
-            con.commit()
+            saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "dünya")
+
         else:
             break
 
-def scrapingOtomotiv():
-    r = requests.get("https://www.sozcu.com.tr/kategori/otomotiv/")
+
+def sozcuTekno():
+    r = requests.get("https://www.sozcu.com.tr/kategori/teknoloji/")
     soup = BeautifulSoup(r.content, "lxml")
     news = soup.find_all("div", attrs={"class": "news-item"})
 
@@ -313,23 +300,492 @@ def scrapingOtomotiv():
         head = new.find("img", attrs={"loading": "lazy"})
         image = head.get("src").replace("?w=220&h=165&mode=crop", "?w=800&h=300&mode=crop").replace(
             "?w=243&h=136&mode=crop", "?w=800&h=300&mode=crop")
-        contentText = makale_cek(link)
+        contenttext = makale_cek(link)
         imgtitle = new.find("img", attrs={"loading": "lazy"})
         title = imgtitle.get("alt")
         req = requests.get(link)
         soup2 = BeautifulSoup(req.content, "lxml")
         datetime = soup2.find("time")
+        datetime = datetime.text
+        datetime = date_converter(datetime, "sözcü")
         link_list = cursor.execute(f"select * from News where url_link = '{link}'")
         if len(link_list.fetchall()) == 0:
-            cursor.execute("insert into News (title,image,text,date,site_name,url_link,type) values (?,?,?,?,?,?,?) ",
-                           (title, image, contentText,sozcu_tarih(datetime.text), "sozcu", link, "otomotiv"))
-            con.commit()
-            id = cursor.execute(f"select news_id from News where url_link = '{link}'").fetchone()
-            cursor.execute(
-                f"insert into Summarizers(new_id,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one) values (?,?,?,?,?,?,?,?)",
-                (id[0], luhn(contentText), lex_rank(contentText), lsa_summary(contentText), textrank(contentText),
-                 giso(contentText), ortayol(contentText), all_in_one(contentText)))
-            con.commit()
+            saveToDatabase(title, image, contenttext, datetime, "sözcü", link, "teknoloji")
+
+        else:
+            break
+
+
+# karar haber
+
+def kararSonDakika():
+    r = requests.get("https://www.karar.com/son-dakika")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("article", attrs={"class": "col-4"})
+
+    for new in news:
+        link = new.a.get("href")
+        linkBasi = "https://www.karar.com"
+        link = linkBasi + link
+
+        head = new.find("img", attrs={"loading": "lazy"})
+        title = head.get("alt")
+
+        newPage = requests.get(link)
+        soup = BeautifulSoup(newPage.content, "lxml")
+
+        resim = soup.find("div", attrs={"class": "imgc"})
+        if resim == None:
+            image == "https://cdn.karar.com/news/1560680.jpg"
+        else:
+            image = resim.img.get("data-src")
+
+        datetime = soup.find("time").text
+
+        contenttext = makale_cek(link)
+
+        datetime = date_converter(datetime, "karar")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "karar", link, "son dakika")
+
+        else:
+            break
+
+
+def kararDunya():
+    r = requests.get("https://www.karar.com/dunya-haberleri")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-4"})
+
+    for new in news:
+
+        link = new.a.get("href")
+        linkBasi = "https://www.karar.com"
+        link = linkBasi + link
+
+        head = new.find("img", attrs={"loading": "lazy"})
+        title = head.get("alt")
+        newPage = requests.get(link)
+        soup = BeautifulSoup(newPage.content, "lxml")
+
+        resim = soup.find("div", attrs={"class": "imgc"})
+        if resim == None:
+            image == "https://cdn.karar.com/news/1560680.jpg"
+        else:
+            image = resim.img.get("data-src")
+
+        datetime = soup.find("time").text
+
+        contenttext = makale_cek(link)
+
+        datetime = date_converter(datetime, "karar")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "karar", link, "dünya")
+
+        else:
+            break
+
+
+def kararEkonomi():
+    r = requests.get("https://www.karar.com/ekonomi-haberleri")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-4"})
+
+    for new in news:
+
+        link = new.a.get("href")
+        linkBasi = "https://www.karar.com"
+        link = linkBasi + link
+
+        head = new.find("img", attrs={"loading": "lazy"})
+        title = head.get("alt")
+        newPage = requests.get(link)
+        soup = BeautifulSoup(newPage.content, "lxml")
+
+        resim = soup.find("div", attrs={"class": "imgc"})
+        if resim == None:
+            image == "https://cdn.karar.com/news/1560680.jpg"
+        else:
+            image = resim.img.get("data-src")
+
+        datetime = soup.find("time").text
+
+        contenttext = makale_cek(link)
+
+        datetime = date_converter(datetime, "karar")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "karar", link, "ekonomi")
+
+        else:
+            break
+
+
+def kararHayat():
+    r = requests.get("https://www.karar.com/hayat-haberleri")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-4"})
+
+    for new in news:
+
+        link = new.a.get("href")
+        linkBasi = "https://www.karar.com"
+        link = linkBasi + link
+
+        head = new.find("img", attrs={"loading": "lazy"})
+        title = head.get("alt")
+        newPage = requests.get(link)
+        soup = BeautifulSoup(newPage.content, "lxml")
+
+        resim = soup.find("div", attrs={"class": "imgc"})
+        if resim == None:
+            image == "https://cdn.karar.com/news/1560680.jpg"
+        else:
+            image = resim.img.get("data-src")
+
+        datetime = soup.find("time").text
+
+        contenttext = makale_cek(link)
+
+        datetime = date_converter(datetime, "karar")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "karar", link, "hayat")
+
+        else:
+            break
+
+
+# trt
+
+def trtSonDakika():
+    r = requests.get("https://www.trthaber.com/haber/gundem/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "standard-left-thumb-card"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        try:
+
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+            resim = soup.find("div", attrs={"class": "news-image"})
+            image = resim.img.get("data-src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = str(makale_cek(link))
+        contenttext = " ".join(contenttext.split())
+
+        datetime = date_converter(datetime, "trt")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "trt", link, "son dakika")
+
+        else:
+            break
+
+
+def trtDunya():
+    r = requests.get("https://www.trthaber.com/haber/dunya/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "standard-left-thumb-card"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        try:
+
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+            resim = soup.find("div", attrs={"class": "news-image"})
+            image = resim.img.get("data-src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        contenttext = " ".join(contenttext.split())
+        datetime = date_converter(datetime, "trt")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "trt", link, "dünya")
+
+        else:
+            break
+
+
+def trtEkonomi():
+    r = requests.get("https://www.trthaber.com/haber/ekonomi/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "standard-left-thumb-card"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        try:
+
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+            resim = soup.find("div", attrs={"class": "news-image"})
+            image = resim.img.get("data-src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        contenttext = " ".join(contenttext.split())
+        datetime = date_converter(datetime, "trt")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "trt", link, "ekonomi")
+
+        else:
+            break
+
+
+def trtTeknoloji():
+    r = requests.get("https://www.trthaber.com/haber/bilim-teknoloji/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "standard-left-thumb-card"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        try:
+
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+            resim = soup.find("div", attrs={"class": "news-image"})
+            image = resim.img.get("data-src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        contenttext = " ".join(contenttext.split())
+        datetime = date_converter(datetime, "trt")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "trt", link, "teknoloji")
+
+        else:
+            break
+
+
+# Son dakika haber sitesi
+
+def sonDakika():
+    r = requests.get("https://www.sondakika.com/guncel/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("li", attrs={"class": "nws"})
+    for new in news:
+        link = new.a.get("href")
+        linkBasi = "https://www.sondakika.com/"
+        link = linkBasi + link
+        title = new.a.get("title")
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("div", attrs={"class": "hbptDate"}).text
+            resim = soup.find("div", attrs={"class": "haberResim"})
+            image = resim.img.get("src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+        contenttext = makale_cek(link)
+
+        datetime = date_converter(datetime, "son dakika")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "son dakika")
+
+        else:
+            break
+
+
+def sonEkonomi():
+    r = requests.get("https://www.sondakika.com/ekonomi/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("li", attrs={"class": "nws"})
+    for new in news:
+        link = new.a.get("href")
+        linkBasi = "https://www.sondakika.com/"
+        link = linkBasi + link
+        title = new.a.get("title")
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("div", attrs={"class": "hbptDate"}).text
+            resim = soup.find("div", attrs={"class": "haberResim"})
+            image = resim.img.get("src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "son dakika")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "ekonomi")
+
+        else:
+            break
+
+
+def sonMagazin():
+    r = requests.get("https://www.sondakika.com/magazin/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("li", attrs={"class": "nws"})
+    for new in news:
+        link = new.a.get("href")
+        linkBasi = "https://www.sondakika.com/"
+        link = linkBasi + link
+        title = new.a.get("title")
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("div", attrs={"class": "hbptDate"}).text
+            resim = soup.find("div", attrs={"class": "haberResim"})
+            image = resim.img.get("src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "son dakika")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "magazin")
+
+        else:
+            break
+
+
+def sonSpor():
+    r = requests.get("https://www.sondakika.com/spor/")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("li", attrs={"class": "nws"})
+    for new in news:
+        link = new.a.get("href")
+        linkBasi = "https://www.sondakika.com/"
+        link = linkBasi + link
+        title = new.a.get("title")
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("div", attrs={"class": "hbptDate"}).text
+            resim = soup.find("div", attrs={"class": "haberResim"})
+            image = resim.img.get("src")
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "son dakika")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "son dakika", link, "spor")
+
+        else:
+            break
+
+
+# Gerçek gündem
+
+def ggSonDakika():
+    r = requests.get("https://www.gercekgundem.com/guncel")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-sm-6"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        image = new.img.get("src")
+
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "gerçek gündem")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "son dakika")
+
+        else:
+            break
+
+
+def ggDunya():
+    r = requests.get("https://www.gercekgundem.com/dunya")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-sm-6"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        image = new.img.get("src")
+
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "gerçek gündem")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "dünya")
+
+        else:
+            break
+
+
+def ggEkonomi():
+    r = requests.get("https://www.gercekgundem.com/ekonomi")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-sm-6"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        image = new.img.get("src")
+
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "gerçek gündem")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "ekonomi")
+
+        else:
+            break
+
+
+def ggHayat():
+    r = requests.get("https://www.gercekgundem.com/yasam")
+    soup = BeautifulSoup(r.content, "lxml")
+    news = soup.find_all("div", attrs={"class": "col-sm-6"})
+    for new in news:
+        link = new.a.get("href")
+        title = new.a.get("title")
+        image = new.img.get("src")
+
+        try:
+            newPage = requests.get(link)
+            soup = BeautifulSoup(newPage.content, "lxml")
+            datetime = soup.find("time").text
+        except:
+            image = "https://trthaberstatic.cdn.wp.trt.com.tr/resimler/2046000/19-mayis-anitkabir-aa-2047437.jpg"
+
+        contenttext = makale_cek(link)
+        datetime = date_converter(datetime, "gerçek gündem")
+        link_list = cursor.execute(f"select * from News where url_link = '{link}'")
+        if len(link_list.fetchall()) == 0:
+            saveToDatabase(title, image, contenttext, datetime, "gerçek gündem", link, "hayat")
+
         else:
             break
 @app.route("/")
@@ -355,9 +811,11 @@ def haber(newstype,sayi):
 
 @app.route("/<string:newstype>/today",methods = ["GET"])
 def tumHaberler(newstype):
-    today = date.today().strftime("%d %m %Y")
+    today = str(date.today().strftime("%Y %m %d")).replace(" ","-")
+
+
     if newstype == "son-dakika":
-        a = cursor.execute(f"select * from News where type = 'sondakika' and date like '{today}%' order by date desc  ")
+        a = cursor.execute(f"select * from News where type = 'son dakika' and date like '{today}%' order by date desc  ")
         return a.fetchall()
     if newstype == "ekonomi":
         a = cursor.execute(f"select * from News where type = 'ekonomi' and date like '{today}%' order by date desc ")
@@ -366,18 +824,24 @@ def tumHaberler(newstype):
         a = cursor.execute(f"select * from News where type = 'spor' and date like '{today}%' order by date desc  ")
         return a.fetchall()
     if newstype == "dunya":
-        a = cursor.execute(f"select * from News where type = 'dunya' and date like '{today}%' order by date desc ")
+        a = cursor.execute(f"select * from News where type = 'dünya' and date like '{today}%' order by date desc ")
         return a.fetchall()
-    if newstype == "otomotiv":
-        a = cursor.execute(f"select * from News where type = 'otomotiv' and date like '{today}%' order by date desc")
+    if newstype == "magazin":
+        a = cursor.execute(f"select * from News where type = 'magazin' and date like '{today}%' order by date desc")
+        return a.fetchall()
+    if newstype == "hayat":
+        a = cursor.execute(f"select * from News where type = 'hayat' and date like '{today}%' order by date desc")
+        return a.fetchall()
+    if newstype == "teknoloji":
+        a = cursor.execute(f"select * from News where type = 'teknoloji' and date like '{today}%' order by date desc")
         return a.fetchall()
 
 @app.route("/<string:newstype>/today/<string:attr>",methods = ["GET"])
 def BugunkuHaberlerAlg(newstype,attr):
-    today = date.today().strftime("%d %m %Y")
-    if newstype == "son-dakika":
+    today = str(date.today().strftime("%Y %m %d")).replace(" ","-")
+    if newstype == "son dakika":
         a = cursor.execute(
-            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'sondakika' and date like '{today}%' order by date desc ")
+            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'son dakika' and date like '{today}%' order by date desc ")
         return a.fetchall()
     if newstype == "ekonomi":
         a = cursor.execute(
@@ -389,11 +853,19 @@ def BugunkuHaberlerAlg(newstype,attr):
         return a.fetchall()
     if newstype == "dunya":
         a = cursor.execute(
-            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'dunya' and date like '{today}%' order by date desc ")
+            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'dünya' and date like '{today}%' order by date desc ")
         return a.fetchall()
-    if newstype == "otomotiv":
+    if newstype == "hayat":
         a = cursor.execute(
-            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'otomotiv' and date like '{today}%' order by date desc  ")
+            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'hayat' and date like '{today}%' order by date desc  ")
+        return a.fetchall()
+    if newstype == "magazin":
+        a = cursor.execute(
+            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'magazin' and date like '{today}%' order by date desc  ")
+        return a.fetchall()
+    if newstype == "teknoloji":
+        a = cursor.execute(
+            f"select news_id,title,image,{attr},date,site_name,url_link from News,Summarizers where News.news_id = Summarizers.new_id and type = 'teknoloji' and date like '{today}%' order by date desc  ")
         return a.fetchall()
 @app.route("/habergirisi")
 def habergetir():
@@ -470,11 +942,90 @@ def loginAuth():
                     valid = True
     return str(valid)
 
+@app.route("/post-alarm",methods = ["POST"])
+def postAlarm():
+    user_id = str(request.json["user_id"])
+    date = str(request.json["date"])
+    type = str(request.json["type"])
+    if len(cursor.execute(f"select * from Alarms where user_id = '{user_id}' and date = '{date}' and type = '{type}'").fetchall()) > 0:
+        return "Hata: Kullanıcı aynı alarmı kaydetmeye çalışıyor."
+
+    cursor.execute(f"insert into Alarms(user_id,date,type) values(?,?,?)",(user_id,date,type))
+    con.commit()
+    return "Alarm başarıyla kaydedildi..."
+@app.route("/get-alarms/<int:user_id>",methods = ["GET"])
+def getAlarms(user_id):
+    return cursor.execute(f"select * from Alarms where user_id = '{user_id}' order by date").fetchall()
+
+@app.route("/check-alarms/<int:user_id>",methods = ["GET"])
+def checkAlarms(user_id):
+    tz = pytz.timezone('Europe/Istanbul')  # Türkiye saati için Istanbul zaman dilimini kullanın
+    now = datetime.now(tz).strftime("%Y-%m-%d %H:%M")
+    user_alarm_dates = cursor.execute(f"select date from Alarms where user_id = '{user_id}'").fetchall()
+
+    for item_date in user_alarm_dates:
+        item_date_str = item_date[0]
+
+        if str(now) == item_date[0]:
+            type_list = []
+            user_alarm_types = cursor.execute(f"SELECT type FROM Alarms WHERE user_id = ? and date = ?", (user_id,str(item_date[0]))).fetchall()
+
+            for item_type in user_alarm_types:
+                type_list.append(item_type[0])
+
+            if len(type_list) > 0:
+                placeholders = ', '.join(['?'] * len(type_list))
+                query = f"SELECT * FROM News WHERE type IN ({placeholders}) order by date desc"
+                news_results = cursor.execute(query, type_list).fetchall()
+                cursor.execute(f"delete from Alarms where user_id = ? and date = ?",(user_id,item_date[0]))
+                con.commit()
+                return jsonify(news_results)
+
+
+
+
+    return "false"
+
+@app.route("/delete-alarm",methods = ["DELETE"])
+def deleteAlarms():
+    user_id = request.json["user_id"]
+    date = str(request.json["date"])
+    type = str(request.json["type"])
+    if len(cursor.execute(f"select * from Alarms where user_id = '{user_id}' and date = '{date}' and type = '{type}'").fetchall()) > 0:
+        cursor.execute(f"delete from Alarms where user_id = ? and date = ? and type = ?" , (user_id, date,type))
+        con.commit()
+        return "başarıyla silindi"
+    return "hata,böyle bir alarm yok"
+
+@app.route("/user-id/<string:data>",methods = ["GET"])
+def kullanıcı(data):
+    return jsonify(cursor.execute(f"select user_id from Users where username = '{data}' or phone_number = '{data}' or mail = '{data}'").fetchall())
+
+
+
+
+
 def haberGirişi():
-    scrapingSonDakika()
-    scrapingEkonomi()
-    scrapingDunya()
-    scrapingOtomotiv()
+    sozcuSonDakika()
+    sozcuDunya()
+    sozcuTekno()
+    sozcuEkonomi()
+    ggHayat()
+    ggDunya()
+    ggEkonomi()
+    ggSonDakika()
+    kararSonDakika()
+    kararEkonomi()
+    kararHayat()
+    kararDunya()
+    trtDunya()
+    trtEkonomi()
+    trtTeknoloji()
+    trtSonDakika()
+    sonDakika()
+    sonSpor()
+    sonMagazin()
+    sonEkonomi()
 
 
 if __name__ == "__main__":

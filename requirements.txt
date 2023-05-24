@@ -11,15 +11,6 @@ scipy==1.9.3
 smart-open==6.2.0
 soupsieve==2.3.2.post1
 urllib3==1.26.14
+flask
 yarg==0.1.9
 gunicorn
-flask
-sumy
-nltk
-spacy
-pytextrank
-datetime
-bcrypt
-schedule
-
-
