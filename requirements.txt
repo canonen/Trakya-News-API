@@ -17,3 +17,5 @@ gunicorn
 sumy
 spacy
 pytextrank
+bcrypt
+schedule
