@@ -14,3 +14,4 @@ urllib3==1.26.14
 flask
 yarg==0.1.9
 gunicorn
+sumy
