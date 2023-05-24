@@ -997,7 +997,7 @@ def kullanıcıKaydet():
         return("User already exists")
 
     else:
-        tempPassword = tempPassword.encode('utf-8')
+        tempPassword = str(tempPassword).encode('utf-8')
         tempPassword = bcrypt.hashpw(tempPassword, bcrypt.gensalt())
 
         cursor.execute("insert into Users(name,surname,mail,username,password,phone_number) Values(?,?,?,?,?,?)",
