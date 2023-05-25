@@ -872,25 +872,25 @@ def tumHaberler(newstype):
 
 
     if newstype == "son-dakika":
-        a = cursor.execute(f"select * from News where type = 'son dakika' and date like '{today}%' order by date desc  ")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'son dakika' and News.date like '{today}%' order by date desc  ")
         return a.fetchall()
     if newstype == "ekonomi":
-        a = cursor.execute(f"select * from News where type = 'ekonomi' and date like '{today}%' order by date desc ")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'ekonomi' and News.date like '{today}%' order by date desc ")
         return a.fetchall()
     if newstype == "spor":
-        a = cursor.execute(f"select * from News where type = 'spor' and date like '{today}%' order by date desc  ")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'spor' and News.date like '{today}%' order by date desc  ")
         return a.fetchall()
     if newstype == "dunya":
-        a = cursor.execute(f"select * from News where type = 'dünya' and date like '{today}%' order by date desc ")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'dünya' and News.date like '{today}%' order by date desc ")
         return a.fetchall()
     if newstype == "magazin":
-        a = cursor.execute(f"select * from News where type = 'magazin' and date like '{today}%' order by date desc")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'magazin' and News.date like '{today}%' order by date desc")
         return a.fetchall()
     if newstype == "hayat":
-        a = cursor.execute(f"select * from News where type = 'hayat' and date like '{today}%' order by date desc")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'hayat' and News.date like '{today}%' order by date desc")
         return a.fetchall()
     if newstype == "teknoloji":
-        a = cursor.execute(f"select * from News where type = 'teknoloji' and date like '{today}%' order by date desc")
+        a = cursor.execute(f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type = 'teknoloji' and News.date like '{today}%' order by date desc")
         return a.fetchall()
 
 @app.route("/<string:newstype>/today/<string:attr>",methods = ["GET"])
