@@ -1018,7 +1018,6 @@ def loginAuth():
                 valid = True
     else:
         try:
-            print(int(data))
             if cursor.execute(f"select password from Users where phone_number = '{data}' ").fetchone() != None:
                 hashed_pwd = cursor.execute(f"select password from Users where phone_number = '{data}'").fetchone()[0]
                 if bcrypt.checkpw(pwd,hashed_pwd):
@@ -1043,7 +1042,13 @@ def postAlarm():
     return "Alarm başarıyla kaydedildi..."
 @app.route("/get-alarms/<int:user_id>",methods = ["GET"])
 def getAlarms(user_id):
-    return cursor.execute(f"select * from Alarms where user_id = '{user_id}' order by date").fetchall()
+    now = datetime.now()
+
+    # Saati 3 saat ileri almak için timedelta kullanma
+    now = now + timedelta(hours=3)
+    now = now.strftime("%Y-%m-%d %H:%M")
+
+    return cursor.execute(f"select * from Alarms where user_id = '{user_id}' and date >= '{now}' order by date").fetchall()
 
 @app.route("/check-alarms/<int:user_id>",methods = ["GET"])
 def checkAlarms(user_id):
@@ -1052,30 +1057,21 @@ def checkAlarms(user_id):
     # Saati 3 saat ileri almak için timedelta kullanma
     now = now + timedelta(hours=3)
     now = now.strftime("%Y-%m-%d %H:%M")
-    print(now)
 
-    user_alarm_dates = cursor.execute(f"select date from Alarms where user_id = '{user_id}'").fetchall()
+    last_user_alarm_date = cursor.execute(f"select date from Alarms where user_id = '{user_id}'and date < '{now}' order by date desc").fetchone()
 
-    for item_date in user_alarm_dates:
-        item_date_str = item_date[0]
+    type_list = []
+    user_alarm_types = cursor.execute(f"SELECT type FROM Alarms WHERE user_id = ? and date = ?",
+                                      (user_id, last_user_alarm_date[0])).fetchall()
 
-        if str(now) == item_date[0]:
-            type_list = []
-            user_alarm_types = cursor.execute(f"SELECT type FROM Alarms WHERE user_id = ? and date = ?", (user_id,str(item_date[0]))).fetchall()
+    for item_type in user_alarm_types:
+        type_list.append(item_type[0])
 
-            for item_type in user_alarm_types:
-                type_list.append(item_type[0])
-
-            if len(type_list) > 0:
-                placeholders = ', '.join(['?'] * len(type_list))
-                query = f"SELECT * FROM News WHERE type IN ({placeholders}) order by date desc"
-                news_results = cursor.execute(query, type_list).fetchall()
-                cursor.execute(f"delete from Alarms where user_id = ? and date = ?",(user_id,item_date[0]))
-                con.commit()
-                return jsonify(news_results)
-
-
-
+    if len(type_list) > 0:
+        placeholders = ', '.join(['?'] * len(type_list))
+        query = f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type IN ({placeholders}) and date <= '{last_user_alarm_date[0]}'order by date desc"
+        news_results = cursor.execute(query, type_list).fetchall()
+        return jsonify(news_results)
 
     return "false"
 
