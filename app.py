@@ -1070,7 +1070,7 @@ def checkAlarms(user_id):
 
     if len(type_list) > 0:
         placeholders = ', '.join(['?'] * len(type_list))
-        query = f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type IN ({placeholders}) and date <= '{last_user_alarm_date[0]}'order by date desc"
+        query = f"select news_id,title,image,text,luhn,lexrank,lsa,textrank,giso,ortayol,all_in_one,date,site_name,url_link,type from News,Summarizers where News.news_id = Summarizers.new_id and News.type IN ({placeholders}) and date <= '{last_user_alarm_date[0]}'order by date desc limit 40"
         news_results = cursor.execute(query, type_list).fetchall()
         return jsonify(news_results)
 
