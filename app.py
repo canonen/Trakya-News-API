@@ -1059,7 +1059,7 @@ def checkAlarms(user_id):
 
     last_user_alarm_date = cursor.execute(f"select date from Alarms where user_id = '{user_id}'and date < '{now}' order by date desc").fetchone()
     if last_user_alarm_date == None:
-        return "ilk alarmınızın saati henüz gelmemiş veya hiç alarm kurmamışsınız..."
+        return "false"
     type_list = []
     user_alarm_types = cursor.execute(f"SELECT type FROM Alarms WHERE user_id = ? and date = ?",
                                       (user_id, last_user_alarm_date[0])).fetchall()
