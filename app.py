@@ -1017,16 +1017,15 @@ def loginAuth():
             if bcrypt.checkpw(pwd,hashed_pwd):
                 valid = True
     else:
-        try:
-            if cursor.execute(f"select password from Users where phone_number = '{data}' ").fetchone() != None:
-                hashed_pwd = cursor.execute(f"select password from Users where phone_number = '{data}'").fetchone()[0]
-                if bcrypt.checkpw(pwd,hashed_pwd):
-                    valid = True
-        except:
-            if cursor.execute(f"select password from Users where username = '{data}' ").fetchone() != None:
-                hashed_pwd = cursor.execute(f"select password from Users where username = '{data}'").fetchone()[0]
-                if bcrypt.checkpw(pwd,hashed_pwd):
-                    valid = True
+
+        if cursor.execute(f"select password from Users where phone_number = '{data}' ").fetchone() != None:
+            hashed_pwd = cursor.execute(f"select password from Users where phone_number = '{data}'").fetchone()[0]
+            if bcrypt.checkpw(pwd,hashed_pwd):
+                valid = True
+        if cursor.execute(f"select password from Users where username = '{data}' ").fetchone() != None:
+            hashed_pwd = cursor.execute(f"select password from Users where username = '{data}'").fetchone()[0]
+            if bcrypt.checkpw(pwd,hashed_pwd):
+                valid = True
     return str(valid)
 
 @app.route("/post-alarm",methods = ["POST"])
